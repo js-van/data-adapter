@@ -3,7 +3,7 @@ import * as chai from 'chai';
 
 class Foo {
   @Adapt({ name: 'baz' }) bar = 42;
-  @Adapt({ denormalize: 1.618 }) foobar = 42;
+  @Adapt({ denormalize: 1.618, normalize: 1.618 }) foobar = 42;
 }
 
 class Bar {
@@ -30,6 +30,19 @@ const denormalizeCb = (obj: Object, field: string): any => {
 
 class Bazfoo {
   @Adapt({ name, denormalize: denormalizeCb }) foo = 42;
+}
+
+class Foobaz {
+  foo = {
+    bar: 42
+  };
+}
+
+class Foobaz2 {
+  @Adapt({ name: 'baz' })
+  foo = {
+    bar: 42
+  };
 }
 
 describe('Data adapter', () => {
@@ -67,13 +80,21 @@ describe('Data adapter', () => {
       chai.expect(denormalize(instance)).deep.equal({ baz: 43  });
     });
   });
-  xdescribe('normalize', () => {
-    xit('should normalize simple objects', () => {
+  describe('normalize', () => {
+    it('should normalize simple objects', () => {
       const instance = { baz: 12 };
       const denormalized = denormalize(instance, Bar);
       chai.expect(instance).deep.equal(normalize(denormalized, Bar));
     });
-    xit('should work with complex objects', () => {
+    it('should work with nested objects', () => {
+      const data = new Foobaz();
+      chai.expect(data).deep.equal(normalize(data, Foobaz));
+    });
+    it('should work with renamed objects', () => {
+      const data = { baz: { bar: 42 } };
+      chai.expect({ foo: { bar: 42 } }).deep.equal(normalize(data, Foobaz2));
+    });
+    it('should work with complex objects', () => {
       const instance = new Foobar();
       const denormalized = denormalize(instance, Foobar);
       chai.expect(instance).deep.equal(normalize(denormalized, Foobar));

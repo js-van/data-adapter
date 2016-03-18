@@ -16,7 +16,7 @@ export interface AdaptConfig {
 
 export const Adapt = (config: AdaptConfig) => {
   return (objType, prop) => {
-    const currentMetadata = metadata.get(objType.constructor) || new TypeAdapter(config);
+    const currentMetadata = metadata.get(objType.constructor) || new TypeAdapter();
     const fieldAdapter = new SerializableField(config, objType, prop);
     currentMetadata.fields.set(prop, fieldAdapter);
     metadata.set(objType.constructor, currentMetadata);
@@ -29,7 +29,7 @@ export const denormalize = (obj: Object, objType?: Function) => {
 };
 
 export const normalize = (obj: Object, objType: Function) => {
-  return transformHelper(objType).normalize(obj);
+  return transformHelper(objType).normalize(obj, objType);
 };
 
 const metadata = new Map<Function, TypeAdapter>();
@@ -48,20 +48,20 @@ const transformHelper = (objType): ITypeAdapter => {
 };
 
 class SerializableField {
-  constructor(private config: AdaptConfig, private objType: Function, private field: string) {}
+  constructor(public config: AdaptConfig, private objType: Function, private field: string) {}
   denormalize(obj: Object, target: Object): void {
     if (this.config.hide) return;
     const targetField = this.getTargetFieldName(obj, target);
     const propValueCtr = this.config.type || obj[this.field].constructor;
     let fieldValue;
     if (!this.config.type && !metadata.get(propValueCtr)) {
-      fieldValue = this.processPrimitiveField(obj, target, this.config.denormalize);
+      fieldValue = this.processPrimitiveField(obj, this.config.denormalize);
     } else {
       fieldValue = transformHelper(propValueCtr).denormalize(obj[this.field]);
     }
     target[targetField] = fieldValue;
   }
-  private getTargetFieldName(obj: Object, target: Object) {
+  getTargetFieldName(obj: Object, target: Object) {
     let targetField = this.field;
     let objField = this.field;
     const config = this.config;
@@ -72,7 +72,7 @@ class SerializableField {
     }
     return targetField;
   }
-  private processPrimitiveField(obj: Object, target: Object, transform: ValueCallback | any): Object {
+  processPrimitiveField(obj: Object, transform: ValueCallback | any): Object {
     let objField = this.field;
     const config = this.config;
     if (typeof transform === 'function') {
@@ -87,20 +87,32 @@ class SerializableField {
 
 interface ITypeAdapter {
   denormalize(obj): Object;
-  normalize(obj): Object;
+  normalize(obj, objType): Object;
 }
 
 class TypeAdapter implements ITypeAdapter {
   fields: Map<string, SerializableField> = new Map<string, SerializableField>();
-  constructor(private config: AdaptConfig) {}
   denormalize(obj) {
     let result = {};
     return this.translate(obj, result, (obj, result, fieldAdapter) => {
       fieldAdapter.denormalize(obj, result);
     });
   }
-  normalize(obj) {
-    return obj;
+  // Fields of obj are either:
+  // - called the same name in the original
+  // - called different name in the original, computed with fields
+  normalize(obj, objType) {
+    let ref = new objType();
+    this.fields.forEach((field, idx) => {
+      let mapped = field.getTargetFieldName(ref, obj);
+      let normalize = field.config.normalize;
+      let value = obj[mapped];
+      if (field.config.type) {
+        value = transformHelper(field.config.type).normalize(value, field.config.type);
+      }
+      ref[idx] = field.processPrimitiveField(ref, field.config.normalize);
+    });
+    return ref;
   }
   private translate(obj, result, cb) {
     for (let name in obj) {
