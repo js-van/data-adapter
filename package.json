@@ -1,0 +1,21 @@
+{
+  "name": "data-adapter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/lib/index.js",
+  "typings": "./dist/lib/index.d.ts",
+  "scripts": {
+    "build": "tsc --declaration",
+    "test": "npm run build && mocha ./dist/**/*.spec.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5",
+    "typescript": "^1.8.9"
+  },
+  "dependencies": {
+    "es6-shims": "^1.1.0"
+  }
+}
