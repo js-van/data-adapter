@@ -18,7 +18,7 @@ const denormalize = (obj, field) => {
 };
 
 const normalize = (obj, field) => {
-  return obj[field] === 'male' ? 0 : 1;
+  return obj[field] === 0 ? 'male' : 'female';
 };
 
 class Kid {
