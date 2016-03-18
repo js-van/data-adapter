@@ -8,10 +8,8 @@ export interface ValueCallback {
 }
 
 export interface AdaptConfig {
-  name?: string;
-  nameCallback?: NameCallback;
-  value?: any;
-  valueCallback?: ValueCallback;
+  name?: string | NameCallback;
+  value?: any | ValueCallback
   type?: Function;
   hide?: boolean;
 }
@@ -53,27 +51,20 @@ class SerializableField {
     let targetField = this.field;
     let objField = this.field;
     const config = this.config;
-    if (this.config.name && this.config.nameCallback) {
-      throw new Error('You can\'t set both "name" and "nameCallback".');
-    }
-    if (config.name) {
-      targetField = config.name;
-    }
-    if (config.nameCallback) {
-      targetField = config.nameCallback(obj, objField);
+    if (typeof config.name === 'function') {
+      targetField = (<NameCallback>config.name)(obj, objField);
+    } else if (config.name) {
+      targetField = <string>config.name;
     }
     return targetField;
   }
   private processPrimitiveField(obj: Object, target: Object): Object {
     let objField = this.field;
     const config = this.config;
-    if (config.value && config.valueCallback) {
-      throw new Error('You can\'t set both "value" and "valueCallback".');
-    }
-    if (config.value) {
+    if (typeof config.value === 'function') {
+      return (<ValueCallback>config.value)(obj, objField);
+    } else if (config.value) {
       return config.value;
-    } else if (config.valueCallback) {
-      return config.valueCallback(obj, objField);
     } else {
       return obj[objField];
     }

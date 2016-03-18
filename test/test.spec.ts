@@ -20,16 +20,16 @@ class Foobar {
   @Adapt({ name: 'baz' }) bar = new Bar();
 }
 
-const nameCallback = (obj: Object, name: string): string => {
+const name = (obj: Object, name: string): string => {
   return 'baz';
 };
 
-const valueCallback = (obj: Object, field: string): any => {
+const value = (obj: Object, field: string): any => {
   return obj[field] + 1;
 };
 
 class Bazfoo {
-  @Adapt({ nameCallback, valueCallback }) foo = 42;
+  @Adapt({ name, value }) foo = 42;
 }
 
 describe('Data adapter', () => {

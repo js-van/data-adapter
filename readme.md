@@ -7,13 +7,13 @@ Library for data adaptation using decorators. You can declaratively state how yo
 ```ts
 import {Adapt, adapt} from 'data-adapter';
 
-const genderTransform = (obj, field) => {
+const value = (obj, field) => {
   return obj[field] === 'male' ? 0 : 1;
 };
 
 class Person {
   @Adapt({ name: 'first_name' }) firstName = 'John Doe';
-  @Adapt({ valueCallback: genderTransform }) gender = 'male';
+  @Adapt({ value }) gender = 'male';
 }
 
 // { first_name: 'John Doe', gender: 0 }
