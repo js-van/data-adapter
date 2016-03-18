@@ -12,9 +12,8 @@ const genderTransform = (obj, field) => {
 };
 
 class Person {
-  firstName = 'John Doe';
-  @Adapt({ valueCallback: genderTransform })
-  gender = 'male';
+  @Adapt({ name: 'first_name' }) firstName = 'John Doe';
+  @Adapt({ valueCallback: genderTransform }) gender = 'male';
 }
 
 // { first_name: 'John Doe', gender: 0 }
