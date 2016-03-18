@@ -1,4 +1,3 @@
-
 export interface NameCallback {
   (obj: Object, name: string): string;
 }
@@ -23,19 +22,22 @@ export const Adapt = (config: AdaptConfig) => {
   };
 };
 
-export const adapt = (obj: Object, objType?: Function) => {
+export const denormalize = (obj: Object, objType?: Function) => {
   objType = objType || obj.constructor;
   const adapter = metadata.get(objType);
   if (!adapter) {
     return JSON.parse(JSON.stringify(obj));
   }
-  return adapter.adapt(obj);
+  return adapter.denormalize(obj);
+};
+
+export const normalize = (obj: Object, objType: Function) => {
 };
 
 const metadata = new Map<Function, TypeAdapter>();
 class SerializableField {
   constructor(private config: AdaptConfig, private objType: Function, private field: string) {}
-  adapt(obj: Object, target: Object): void {
+  denormalize(obj: Object, target: Object): void {
     if (this.config.hide) return;
     const targetField = this.getTargetFieldName(obj, target);
     const propValueCtr = obj[this.field].constructor;
@@ -70,18 +72,18 @@ class SerializableField {
     }
   }
   private processComplexField(ctr: Function, value: Object): Object {
-    return metadata.get(ctr).adapt(value);
+    return metadata.get(ctr).denormalize(value);
   }
 }
 
 class TypeAdapter {
   fields: Map<string, SerializableField> = new Map<string, SerializableField>();
-  adapt(obj) {
+  denormalize(obj) {
     let result = {};
     for (let name in obj) {
       const fieldAdapter = this.fields.get(name);
       if (fieldAdapter) {
-        fieldAdapter.adapt(obj, result);
+        fieldAdapter.denormalize(obj, result);
       } else {
         result[name] = obj[name];
       }

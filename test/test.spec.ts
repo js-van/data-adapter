@@ -1,4 +1,4 @@
-import {Adapt, adapt} from '../lib/index';
+import {Adapt, denormalize} from '../lib/index';
 import * as chai from 'chai';
 
 class Foo {
@@ -35,23 +35,23 @@ class Bazfoo {
 describe('Data adapter', () => {
   it('should work without decorators set', () => {
     const instance = { baz: 12 };
-    chai.expect(adapt(instance, Bar)).deep.equal({ baz: 12 });
+    chai.expect(denormalize(instance, Bar)).deep.equal({ baz: 12 });
   });
   it('should work without type set', () => {
     const instance = new Foo();
-    chai.expect(adapt(instance, Foo)).deep.equal({ baz: 42, foobar: 1.618 });
+    chai.expect(denormalize(instance, Foo)).deep.equal({ baz: 42, foobar: 1.618 });
   });
   it('should work with "name" and "value"', () => {
     const instance = { bar: 12, foobar: 45 };
-    chai.expect(adapt(instance, Foo)).deep.equal({ baz: 12, foobar: 1.618 });
+    chai.expect(denormalize(instance, Foo)).deep.equal({ baz: 12, foobar: 1.618 });
   });
   it('should work with "hide"', () => {
     const instance = new Baz();
-    chai.expect(adapt(instance)).deep.equal({ baz: 42 });
+    chai.expect(denormalize(instance)).deep.equal({ baz: 42 });
   });
   it('should work with "complex" fields', () => {
     const instance = new Foobar();
-    chai.expect(adapt(instance)).deep.equal({
+    chai.expect(denormalize(instance)).deep.equal({
       foo: {
         baz: 42,
         foobar: 1.618
@@ -63,7 +63,7 @@ describe('Data adapter', () => {
   });
   it('should work with callbacks', () => {
     const instance = new Bazfoo();
-    chai.expect(adapt(instance)).deep.equal({ baz: 43  });
+    chai.expect(denormalize(instance)).deep.equal({ baz: 43  });
   });
 });
 
