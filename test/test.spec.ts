@@ -3,7 +3,7 @@ import * as chai from 'chai';
 
 class Foo {
   @Adapt({ name: 'baz' }) bar = 42;
-  @Adapt({ denormalize: 1.618, normalize: 1.618 }) foobar = 42;
+  @Adapt({ denormalize: 1.618, normalize: 42 }) foobar = 42;
 }
 
 class Bar {
@@ -43,6 +43,25 @@ class Foobaz2 {
   foo = {
     bar: 42
   };
+}
+
+const genderToNumber = (obj, prop) => {
+  return obj[prop] === 'male' ? 0 : 1;
+};
+const numberToGender = (obj, prop) => {
+  return obj[prop] === 0 ? 'male' : 'female';
+};
+
+class Kid {
+  @Adapt({ normalize: numberToGender, denormalize: genderToNumber })
+  gender;
+}
+
+class Parent {
+  @Adapt({ name: 'first_name' }) firstName;
+  @Adapt({ name: 'last_name' }) lastName;
+  @Adapt({ type: Kid })
+  kids;
 }
 
 describe('Data adapter', () => {
@@ -98,6 +117,36 @@ describe('Data adapter', () => {
       const instance = new Foobar();
       const denormalized = denormalize(instance, Foobar);
       chai.expect(instance).deep.equal(normalize(denormalized, Foobar));
+    });
+    it('should work with nested adapt rules', () => {
+      const parent = new Parent();
+      parent.firstName = 'foo';
+      parent.lastName = 'bar';
+      const kid1 = new Kid();
+      kid1.gender = 'male';
+      const kid2 = new Kid();
+      kid2.gender = 'female';
+      parent.kids = [kid1, kid2];
+      const denormalized = denormalize(parent);
+      chai.expect(denormalized).deep.equal({
+        'first_name': 'foo',
+        'last_name': 'bar',
+        kids: [{
+          gender: 0
+        }, {
+          gender: 1
+        }]
+      });
+      const normalized = normalize(denormalized, Parent);
+      chai.expect(normalized).deep.equal({
+        firstName: 'foo',
+        lastName: 'bar',
+        kids: [{
+          gender: 'male'
+        }, {
+          gender: 'female'
+        }]
+      });
     });
   });
 });

@@ -55,9 +55,13 @@ class SerializableField {
     const propValueCtr = this.config.type || obj[this.field].constructor;
     let fieldValue;
     if (!this.config.type && !metadata.get(propValueCtr)) {
-      fieldValue = this.processPrimitiveField(obj, this.config.denormalize);
+      fieldValue = this.processPrimitiveField(obj, this.field, this.config.denormalize);
     } else {
-      fieldValue = transformHelper(propValueCtr).denormalize(obj[this.field]);
+      if (obj[this.field] instanceof Array) {
+        fieldValue = obj[this.field].map(v => transformHelper(propValueCtr).denormalize(v));
+      } else {
+        fieldValue = transformHelper(propValueCtr).denormalize(obj[this.field]);
+      }
     }
     target[targetField] = fieldValue;
   }
@@ -72,8 +76,7 @@ class SerializableField {
     }
     return targetField;
   }
-  processPrimitiveField(obj: Object, transform: ValueCallback | any): Object {
-    let objField = this.field;
+  processPrimitiveField(obj: Object, objField: string, transform: ValueCallback | any): Object {
     const config = this.config;
     if (typeof transform === 'function') {
       return (<ValueCallback>transform)(obj, objField);
@@ -107,12 +110,22 @@ class TypeAdapter implements ITypeAdapter {
       let mapped = field.getTargetFieldName(ref, obj);
       let normalize = field.config.normalize;
       let value = obj[mapped];
-      if (field.config.type) {
-        value = transformHelper(field.config.type).normalize(value, field.config.type);
+      if (value instanceof Array) {
+        value = value.map(v => this.processValue(field, obj, mapped, v));
+      } else {
+        value = this.processValue(field, obj, mapped, value);
       }
-      ref[idx] = field.processPrimitiveField(ref, field.config.normalize);
+      ref[idx] = value;
     });
     return ref;
+  }
+  private processValue(field, ref, objField, value) {
+    if (field.config.type) {
+      value = transformHelper(field.config.type).normalize(value, field.config.type);
+    } else {
+      value = field.processPrimitiveField(ref, objField, field.config.normalize);
+    }
+    return value;
   }
   private translate(obj, result, cb) {
     for (let name in obj) {
