@@ -2,6 +2,12 @@
 
 Library for data adaptation using decorators. You can declaratively state how your data should look when being send to the server.
 
+## How to use?
+
+```
+npm install data-adapter
+```
+
 ## Example
 
 ```ts
