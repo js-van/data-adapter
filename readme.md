@@ -5,7 +5,7 @@ Library for data adaptation using decorators. You can declaratively state how yo
 ## Example
 
 ```ts
-import {Adapt, adapt} from 'data-adapter';
+import {Adapt, denormalize} from 'data-adapter';
 
 const value = (obj, field) => {
   return obj[field] === 'male' ? 0 : 1;
@@ -17,7 +17,7 @@ class Person {
 }
 
 // { first_name: 'John Doe', gender: 0 }
-adapt(new Person());
+denormalize(new Person());
 ```
 
 ## Roadmap
