@@ -86,6 +86,14 @@ class SerializableField {
       return obj[objField];
     }
   }
+  processGenericField(ref, objField, value) {
+    if (this.config.type) {
+      value = transformHelper(this.config.type).normalize(value, this.config.type);
+    } else {
+      value = this.processPrimitiveField(ref, objField, this.config.normalize);
+    }
+    return value;
+  }
 }
 
 interface ITypeAdapter {
@@ -97,9 +105,15 @@ class TypeAdapter implements ITypeAdapter {
   fields: Map<string, SerializableField> = new Map<string, SerializableField>();
   denormalize(obj) {
     let result = {};
-    return this.translate(obj, result, (obj, result, fieldAdapter) => {
-      fieldAdapter.denormalize(obj, result);
-    });
+    for (let name in obj) {
+      const fieldAdapter = this.fields.get(name);
+      if (fieldAdapter) {
+        fieldAdapter.denormalize(obj, result);
+      } else {
+        result[name] = obj[name];
+      }
+    }
+    return result;
   }
   // Fields of obj are either:
   // - called the same name in the original
@@ -111,31 +125,12 @@ class TypeAdapter implements ITypeAdapter {
       let normalize = field.config.normalize;
       let value = obj[mapped];
       if (value instanceof Array) {
-        value = value.map(v => this.processValue(field, obj, mapped, v));
+        value = value.map(v => field.processGenericField(obj, mapped, v));
       } else {
-        value = this.processValue(field, obj, mapped, value);
+        value = field.processGenericField(obj, mapped, value);
       }
       ref[idx] = value;
     });
     return ref;
-  }
-  private processValue(field, ref, objField, value) {
-    if (field.config.type) {
-      value = transformHelper(field.config.type).normalize(value, field.config.type);
-    } else {
-      value = field.processPrimitiveField(ref, objField, field.config.normalize);
-    }
-    return value;
-  }
-  private translate(obj, result, cb) {
-    for (let name in obj) {
-      const fieldAdapter = this.fields.get(name);
-      if (fieldAdapter) {
-        cb(obj, result, fieldAdapter);
-      } else {
-        result[name] = obj[name];
-      }
-    }
-    return result;
   }
 }
