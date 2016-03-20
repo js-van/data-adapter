@@ -24,8 +24,8 @@ const name = (obj: Object, name: string): string => {
   return 'baz';
 };
 
-const denormalizeCb = (obj: Object, field: string): any => {
-  return obj[field] + 1;
+const denormalizeCb = (obj: Object, prop: string): any => {
+  return obj[prop] + 1;
 };
 
 class Bazfoo {
@@ -92,7 +92,7 @@ describe('Data adapter', () => {
       const instance = new Baz();
       chai.expect(denormalize(instance)).deep.equal({ baz: 42 });
     });
-    it('should work with "complex" fields', () => {
+    it('should work with "complex" props', () => {
       const instance = new Foobar();
       chai.expect(denormalize(instance)).deep.equal({
         foo: {
