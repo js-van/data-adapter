@@ -3,7 +3,7 @@ export interface NameCallback {
 }
 
 export interface ValueCallback {
-  (obj: Object, field: string): any;
+  (obj: Object, propName: string): any;
 }
 
 export interface AdaptConfig {
@@ -17,8 +17,8 @@ export interface AdaptConfig {
 export const Adapt = (config: AdaptConfig) => {
   return (objType, prop) => {
     const currentMetadata = metadata.get(objType.constructor) || new TypeAdapter();
-    const fieldAdapter = new SerializableField(config, objType, prop);
-    currentMetadata.fields.set(prop, fieldAdapter);
+    const propertyAdapter = new PropertyAdapter(config, objType, prop);
+    currentMetadata.props.set(prop, propertyAdapter);
     metadata.set(objType.constructor, currentMetadata);
   };
 };
@@ -47,52 +47,51 @@ const transformHelper = (objType): ITypeAdapter => {
   }
 };
 
-class SerializableField {
-  constructor(public config: AdaptConfig, private objType: Function, private field: string) {}
-  denormalize(obj: Object, target: Object): void {
-    if (this.config.hide) return;
-    const targetField = this.getTargetFieldName(obj, target);
-    const propValueCtr = this.config.type || obj[this.field].constructor;
-    let fieldValue;
-    if (!this.config.type && !metadata.get(propValueCtr)) {
-      fieldValue = this.processPrimitiveField(obj, this.field, this.config.denormalize);
-    } else {
-      if (obj[this.field] instanceof Array) {
-        fieldValue = obj[this.field].map(v => transformHelper(propValueCtr).denormalize(v));
-      } else {
-        fieldValue = transformHelper(propValueCtr).denormalize(obj[this.field]);
-      }
-    }
-    target[targetField] = fieldValue;
-  }
-  getTargetFieldName(obj: Object, target: Object) {
-    let targetField = this.field;
-    let objField = this.field;
+class PropertyAdapter {
+  constructor(public config: AdaptConfig, private objType: Function, private propName: string) {}
+  private getTargetPropName(original: Object, result: Object) {
+    let targetPropName = this.propName;
+    let originalPropName = this.propName;
     const config = this.config;
     if (typeof config.name === 'function') {
-      targetField = (<NameCallback>config.name)(obj, objField);
+      targetPropName = (<NameCallback>config.name)(original, originalPropName);
     } else if (config.name) {
-      targetField = <string>config.name;
+      targetPropName = <string>config.name;
     }
-    return targetField;
+    return targetPropName;
   }
-  processPrimitiveField(obj: Object, objField: string, transform: ValueCallback | any): Object {
+  private processPrimitiveProperty(obj: Object, propName: string, transform: ValueCallback | any): Object {
     const config = this.config;
     if (typeof transform === 'function') {
-      return (<ValueCallback>transform)(obj, objField);
+      return (<ValueCallback>transform)(obj, propName);
     } else if (transform) {
       return transform;
     } else {
-      return obj[objField];
+      return obj[propName];
     }
   }
-  processGenericField(ref, objField, value) {
+  denormalize(original, current) {
+    if (this.config.hide) return;
+    const oldPropName = this.propName;
+    const oldValue = original[oldPropName];
+    let result = null;
     if (this.config.type) {
-      value = transformHelper(this.config.type).normalize(value, this.config.type);
+      result = transformHelper(this.config.type).denormalize(oldValue);
     } else {
-      value = this.processPrimitiveField(ref, objField, this.config.normalize);
+      result = this.processPrimitiveProperty(original, oldPropName, this.config.denormalize);
     }
-    return value;
+    current[this.getTargetPropName(original, current)] = result;
+  }
+  normalize(original, current) {
+    const oldPropName = this.getTargetPropName(original, current);
+    const oldValue = original[oldPropName];
+    let result = null;
+    if (this.config.type) {
+      result = transformHelper(this.config.type).normalize(oldValue, this.config.type);
+    } else {
+      result = this.processPrimitiveProperty(original, oldPropName, this.config.normalize);
+    }
+    current[this.propName] = result;
   }
 }
 
@@ -102,35 +101,36 @@ interface ITypeAdapter {
 }
 
 class TypeAdapter implements ITypeAdapter {
-  fields: Map<string, SerializableField> = new Map<string, SerializableField>();
+  props: Map<string, PropertyAdapter> = new Map<string, PropertyAdapter>();
   denormalize(obj) {
-    let result = {};
-    for (let name in obj) {
-      const fieldAdapter = this.fields.get(name);
-      if (fieldAdapter) {
-        fieldAdapter.denormalize(obj, result);
-      } else {
-        result[name] = obj[name];
-      }
+    let result;
+    if (obj instanceof Array) {
+      result = obj.map(obj => this.denormalize(obj));
+    } else {
+      result = {};
+      Object.keys(obj).forEach(key => {
+        const propertyAdapter = this.props.get(key);
+        if (propertyAdapter) {
+          propertyAdapter.denormalize(obj, result);
+        } else {
+          result[key] = obj[key];
+        }
+      });
     }
     return result;
   }
-  // Fields of obj are either:
+  // Properties of obj are either:
   // - called the same name in the original
-  // - called different name in the original, computed with fields
+  // - called different name in the original, computed with properties
   normalize(obj, objType) {
-    let ref = new objType();
-    this.fields.forEach((field, idx) => {
-      let mapped = field.getTargetFieldName(ref, obj);
-      let normalize = field.config.normalize;
-      let value = obj[mapped];
-      if (value instanceof Array) {
-        value = value.map(v => field.processGenericField(obj, mapped, v));
-      } else {
-        value = field.processGenericField(obj, mapped, value);
-      }
-      ref[idx] = value;
-    });
-    return ref;
+    let result;
+    if (obj instanceof Array) {
+      result = obj.map(obj => this.normalize(obj, objType));
+    } else {
+      result = new objType();
+      this.props.forEach(propertyAdapter => propertyAdapter.normalize(obj, result));
+    }
+    return result;
   }
 }
+

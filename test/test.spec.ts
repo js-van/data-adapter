@@ -64,6 +64,16 @@ class Parent {
   kids;
 }
 
+class Bazbarfoo {
+  @Adapt({ name: 'foo' })
+  bar = 42;
+}
+
+class Barfoo {
+  @Adapt({ name: 'bar', type: Bazbarfoo })
+  foo = [new Bazbarfoo(), new Bazbarfoo()];
+}
+
 describe('Data adapter', () => {
   describe('denormalize', () => {
     it('should work without decorators set', () => {
@@ -97,6 +107,12 @@ describe('Data adapter', () => {
     it('should work with callbacks', () => {
       const instance = new Bazfoo();
       chai.expect(denormalize(instance)).deep.equal({ baz: 43  });
+    });
+    it('should work with arrays', () => {
+      const instance = new Barfoo();
+      chai.expect(denormalize(instance)).deep.equal({
+        bar: [{ foo: 42 }, { foo: 42 }]
+      });
     });
   });
   describe('normalize', () => {
