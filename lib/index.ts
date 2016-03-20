@@ -1,3 +1,5 @@
+import 'es6-shim';
+
 export interface NameCallback {
   (obj: Object, name: string): string;
 }
