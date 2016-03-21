@@ -1,12 +1,16 @@
 {
   "name": "data-adapter",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "",
   "main": "./dist/lib/index.js",
   "typings": "./dist/lib/index.d.ts",
   "scripts": {
     "build": "tsc --declaration",
     "test": "npm run build && mocha ./dist/**/*.spec.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mgechev/data-adapter"
   },
   "keywords": [
     "json",
