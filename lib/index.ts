@@ -1,4 +1,7 @@
 import 'es6-shim';
+import 'reflect-metadata';
+
+const IDENTIFIER = '$$data-adapter$$';
 
 export interface NameCallback {
   (obj: Object, name: string): string;
@@ -18,18 +21,18 @@ export interface AdaptConfig {
 
 export const Adapt = (config: AdaptConfig) => {
   return (objType, prop) => {
-    const currentMetadata = metadata.get(objType.constructor) || new TypeAdapter();
+    const currentMetadata = Reflect.get(objType.constructor, IDENTIFIER) || new TypeAdapter();
     const propertyAdapter = new PropertyAdapter(config, objType);
     currentMetadata.propertyAdapters.set(prop, propertyAdapter);
-    metadata.set(objType.constructor, currentMetadata);
+    Reflect.set(objType.constructor, IDENTIFIER, currentMetadata);
   };
 };
 
 export const AdaptClass = (config: AdaptConfig) => {
   return (objType) => {
-    const currentMetadata = metadata.get(objType) || new TypeAdapter();
+    const currentMetadata = Reflect.get(objType, IDENTIFIER) || new TypeAdapter();
     currentMetadata.genericPropertyAdapter = new PropertyAdapter(config, objType);
-    metadata.set(objType, currentMetadata);
+    Reflect.set(objType, IDENTIFIER, currentMetadata);
   };
 };
 
@@ -42,11 +45,9 @@ export const normalize = (obj: Object, objType: Function) => {
   return transformHelper(objType).normalize(obj, objType);
 };
 
-const metadata = new Map<Function, TypeAdapter>();
-
 const basicTransformer = obj => JSON.parse(JSON.stringify(obj));
 const transformHelper = (objType): ITypeAdapter => {
-  const adapter = metadata.get(objType);
+  const adapter = Reflect.get(objType, IDENTIFIER);
   if (adapter) {
     return adapter;
   } else {
