@@ -10,6 +10,30 @@ npm install data-adapter
 
 ## Example
 
+### Using class adapter
+
+```ts
+import {AdaptClass, denormalize, normalize} from 'data-adapter';
+
+@AdaptClass({
+  name: snakeCase
+})
+class Human {
+  firstName: string = 'foo';
+  lastName: string = 'bar';
+  age: number = 42;
+}
+
+// { first_name: 'foo', last_name: 'bar', age: 42 }
+denormalize(new Human());
+
+// { firstName: 'foo', lastName: 'bar', age: 42 }
+normalize({ first_name: 'foo', last_name: 'bar', age: 42 }, Human);
+
+```
+
+### Using property adapters
+
 ```ts
 import {Adapt, denormalize, normalize} from 'data-adapter';
 
