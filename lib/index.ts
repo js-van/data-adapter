@@ -19,9 +19,17 @@ export interface AdaptConfig {
 export const Adapt = (config: AdaptConfig) => {
   return (objType, prop) => {
     const currentMetadata = metadata.get(objType.constructor) || new TypeAdapter();
-    const propertyAdapter = new PropertyAdapter(config, objType, prop);
-    currentMetadata.props.set(prop, propertyAdapter);
+    const propertyAdapter = new PropertyAdapter(config, objType);
+    currentMetadata.propertyAdapters.set(prop, propertyAdapter);
     metadata.set(objType.constructor, currentMetadata);
+  };
+};
+
+export const AdaptClass = (config: AdaptConfig) => {
+  return (objType) => {
+    const currentMetadata = metadata.get(objType) || new TypeAdapter();
+    currentMetadata.genericPropertyAdapter = new PropertyAdapter(config, objType);
+    metadata.set(objType, currentMetadata);
   };
 };
 
@@ -50,10 +58,10 @@ const transformHelper = (objType): ITypeAdapter => {
 };
 
 class PropertyAdapter {
-  constructor(public config: AdaptConfig, private objType: Function, private propName: string) {}
-  private getTargetPropName(original: Object, result: Object) {
-    let targetPropName = this.propName;
-    let originalPropName = this.propName;
+  constructor(public config: AdaptConfig, private objType: Function) {}
+  private getTargetPropName(original: Object, result: Object, propName: string) {
+    let targetPropName = propName;
+    let originalPropName = propName;
     const config = this.config;
     if (typeof config.name === 'function') {
       targetPropName = (<NameCallback>config.name)(original, originalPropName);
@@ -72,9 +80,9 @@ class PropertyAdapter {
       return obj[propName];
     }
   }
-  denormalize(original, current) {
+  denormalize(original, current, propName) {
     if (this.config.hide) return;
-    const oldPropName = this.propName;
+    const oldPropName = propName;
     const oldValue = original[oldPropName];
     let result = null;
     if (this.config.type) {
@@ -82,10 +90,10 @@ class PropertyAdapter {
     } else {
       result = this.processPrimitiveProperty(original, oldPropName, this.config.denormalize);
     }
-    current[this.getTargetPropName(original, current)] = result;
+    current[this.getTargetPropName(original, current, propName)] = result;
   }
-  normalize(original, current) {
-    const oldPropName = this.getTargetPropName(original, current);
+  normalize(original, current, propName) {
+    const oldPropName = this.getTargetPropName(original, current, propName);
     const oldValue = original[oldPropName];
     let result = null;
     if (this.config.type) {
@@ -93,7 +101,7 @@ class PropertyAdapter {
     } else {
       result = this.processPrimitiveProperty(original, oldPropName, this.config.normalize);
     }
-    current[this.propName] = result;
+    current[propName] = result;
   }
 }
 
@@ -103,7 +111,8 @@ interface ITypeAdapter {
 }
 
 class TypeAdapter implements ITypeAdapter {
-  props: Map<string, PropertyAdapter> = new Map<string, PropertyAdapter>();
+  propertyAdapters: Map<string, PropertyAdapter> = new Map<string, PropertyAdapter>();
+  genericPropertyAdapter: PropertyAdapter;
   denormalize(obj) {
     let result;
     if (obj instanceof Array) {
@@ -111,9 +120,9 @@ class TypeAdapter implements ITypeAdapter {
     } else {
       result = {};
       Object.keys(obj).forEach(key => {
-        const propertyAdapter = this.props.get(key);
+        const propertyAdapter = this.propertyAdapters.get(key) || this.genericPropertyAdapter;
         if (propertyAdapter) {
-          propertyAdapter.denormalize(obj, result);
+          propertyAdapter.denormalize(obj, result, key);
         } else {
           result[key] = obj[key];
         }
@@ -130,7 +139,12 @@ class TypeAdapter implements ITypeAdapter {
       result = obj.map(obj => this.normalize(obj, objType));
     } else {
       result = new objType();
-      this.props.forEach(propertyAdapter => propertyAdapter.normalize(obj, result));
+      if (this.genericPropertyAdapter) {
+        Object.keys(result).forEach(key => this.genericPropertyAdapter.normalize(obj, result, key));
+      }
+      this.propertyAdapters.forEach((propertyAdapter, key) => {
+        propertyAdapter.normalize(obj, result, key);
+      });
     }
     return result;
   }

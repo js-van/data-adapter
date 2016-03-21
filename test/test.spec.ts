@@ -1,4 +1,4 @@
-import {Adapt, denormalize, normalize} from '../lib/index';
+import {Adapt, AdaptClass, denormalize, normalize} from '../lib/index';
 import * as chai from 'chai';
 
 class Foo {
@@ -72,6 +72,16 @@ class Bazbarfoo {
 class Barfoo {
   @Adapt({ name: 'bar', type: Bazbarfoo })
   foo = [new Bazbarfoo(), new Bazbarfoo()];
+}
+
+
+@AdaptClass({
+  name: (obj, prop) => prop.toUpperCase()
+})
+class Human {
+  firstName: string = 'foo';
+  lastName: string = 'bar';
+  age: number = 42;
 }
 
 describe('Data adapter', () => {
@@ -162,6 +172,26 @@ describe('Data adapter', () => {
         }, {
           gender: 'female'
         }]
+      });
+    });
+  });
+  describe('class property adapters', () => {
+    it('should work with generic property adapter', () => {
+      const human = new Human();
+      chai.expect(denormalize(human)).deep.equal({
+        FIRSTNAME: 'foo',
+        LASTNAME: 'bar',
+        AGE: 42
+      });
+      const denormalized = {
+        FIRSTNAME: 'baz',
+        LASTNAME: 'foo',
+        AGE: 32
+      };
+      chai.expect(normalize(denormalized, Human)).deep.equal({
+        firstName: 'baz',
+        lastName: 'foo',
+        age: 32
       });
     });
   });
