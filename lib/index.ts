@@ -1,7 +1,4 @@
-import 'es6-shim';
 import 'reflect-metadata';
-
-const IDENTIFIER = '$$data-adapter$$';
 
 export interface NameCallback {
   (obj: Object, name: string): string;
@@ -10,6 +7,8 @@ export interface NameCallback {
 export interface ValueCallback {
   (obj: Object, propName: string): any;
 }
+
+const METADATA_KEY: string = '$$$data-adapter$$$';
 
 export interface AdaptConfig {
   name?: string | NameCallback;
@@ -21,18 +20,18 @@ export interface AdaptConfig {
 
 export const Adapt = (config: AdaptConfig) => {
   return (objType, prop) => {
-    const currentMetadata = Reflect.get(objType.constructor, IDENTIFIER) || new TypeAdapter();
+    const currentMetadata = Reflect.getMetadata(METADATA_KEY, objType.constructor) || new TypeAdapter();
     const propertyAdapter = new PropertyAdapter(config, objType);
     currentMetadata.propertyAdapters.set(prop, propertyAdapter);
-    Reflect.set(objType.constructor, IDENTIFIER, currentMetadata);
+    Reflect.defineMetadata(METADATA_KEY, currentMetadata, objType.constructor);
   };
 };
 
 export const AdaptClass = (config: AdaptConfig) => {
   return (objType) => {
-    const currentMetadata = Reflect.get(objType, IDENTIFIER) || new TypeAdapter();
+    const currentMetadata = Reflect.getMetadata(METADATA_KEY, objType) || new TypeAdapter();
     currentMetadata.genericPropertyAdapter = new PropertyAdapter(config, objType);
-    Reflect.set(objType, IDENTIFIER, currentMetadata);
+    Reflect.defineMetadata(METADATA_KEY, currentMetadata, objType);
   };
 };
 
@@ -47,7 +46,7 @@ export const normalize = (obj: Object, objType: Function) => {
 
 const basicTransformer = obj => JSON.parse(JSON.stringify(obj));
 const transformHelper = (objType): ITypeAdapter => {
-  const adapter = Reflect.get(objType, IDENTIFIER);
+  const adapter = Reflect.getMetadata(METADATA_KEY, objType);
   if (adapter) {
     return adapter;
   } else {
