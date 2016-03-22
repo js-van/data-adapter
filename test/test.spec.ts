@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 import {Adapt, AdaptClass, denormalize, normalize} from '../lib/index';
 import * as chai from 'chai';
 

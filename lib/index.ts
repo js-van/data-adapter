@@ -1,5 +1,3 @@
-import 'reflect-metadata';
-
 export interface NameCallback {
   (obj: Object, name: string): string;
 }
